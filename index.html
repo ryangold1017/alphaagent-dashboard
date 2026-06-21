@@ -85,10 +85,10 @@
 
     .agent-col { padding: 16px; }
 
-    .stat-grid { grid-template-columns: 1fr; gap: 14px; }
-    .stat-block:nth-child(3) { grid-column: span 1; }
+    .stat-grid { display: block; }
+    .stat-block { margin-bottom: 14px; }
+    .stat-block:last-child { margin-bottom: 0; }
     .stat-value { font-size: 20px; white-space: normal; word-break: break-word; }
-    .stat-block { padding-right: 0; }
 
     .position-row { grid-template-columns: 1fr auto; row-gap: 4px; }
     .pos-bar { display: none; }
