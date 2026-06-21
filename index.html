@@ -85,9 +85,10 @@
 
     .agent-col { padding: 16px; }
 
-    .stat-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .stat-grid { grid-template-columns: 1fr 1fr; gap: 12px 20px; }
     .stat-block:nth-child(3) { grid-column: span 2; }
-    .stat-value { font-size: 17px; }
+    .stat-value { font-size: 16px; }
+    .stat-block { padding-right: 4px; }
 
     .position-row { grid-template-columns: 1fr auto; row-gap: 4px; }
     .pos-bar { display: none; }
@@ -657,8 +658,4 @@ init();
 
    The Reset/Halt buttons are currently just alerts - wiring them
    means exposing a protected POST endpoint on each agent that
-   calls guardian.manualReset() (or a trip equivalent).
-*/
-</script>
-</body>
-</html>
+   calls guardian.manualReset() (or a tr
