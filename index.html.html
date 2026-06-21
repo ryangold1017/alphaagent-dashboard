@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlphaAgent Control Panel</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg: #0a0b0d;
+    --panel: #121417;
+    --panel-raised: #181b1f;
+    --border: #232730;
+    --border-soft: #1a1d23;
+
+    --text: #e6e8eb;
+    --text-dim: #8b919c;
+    --text-faint: #6b7280;
+
+    --stock: #5b8def;
+    --stock-dim: #5b8def22;
+
+    --crypto: #e8a23d;
+    --crypto-dim: #e8a23d22;
+
+    --green: #3ecf8e;
+    --green-dim: #3ecf8e1a;
+    --red: #ef4444;
+    --red-dim: #ef44441a;
+    --amber: #e8a23d;
+    --gray: #555b66;
+
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { color-scheme: dark; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .logo { font-family: var(--mono); font-weight: 700; font-size: 14px; letter-spacing: -0.02em; }
+  .logo-sub { font-family: var(--mono); font-size: 10px; color: var(--text-faint); letter-spacing: 0.08em; text-transform: uppercase; }
+  .topbar-right { display: flex; align-items: center; gap: 18px; }
+
+  .kill-pill {
+    display: flex; align-items: center; gap: 7px;
+    padding: 6px 12px; border-radius: 5px;
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    border: 1px solid var(--border);
+  }
+  .kill-pill.ok { color: var(--green); border-color: var(--green-dim); background: var(--green-dim); }
+  .kill-pill.tripped { color: var(--red); border-color: var(--red-dim); background: var(--red-dim); animation: pulse-bg 2s infinite; }
+  @keyframes pulse-bg { 0%, 100% { background: var(--red-dim); } 50% { background: #ef444433; } }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .clock { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
+
+  .panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); }
+  @media (max-width: 980px) { .panel-grid { grid-template-columns: 1fr; } }
+
+  .agent-col { background: var(--bg); padding: 24px; min-width: 0; }
+
+  .agent-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
+  .agent-title { font-family: var(--mono); font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+  .agent-col.stock .agent-title { color: var(--stock); }
+  .agent-col.crypto .agent-title { color: var(--crypto); }
+  .agent-mode { font-family: var(--mono); font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em; }
+  .agent-sub { font-size: 11px; color: var(--text-dim); margin-bottom: 16px; }
+
+  .heartbeat {
+    display: flex; align-items: center; gap: 3px; height: 28px;
+    margin-bottom: 24px; padding: 8px 10px;
+    background: var(--panel); border: 1px solid var(--border-soft); border-radius: 6px;
+    overflow-x: auto;
+  }
+  .pip { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; cursor: pointer; transition: transform 0.12s ease; position: relative; }
+  .pip:hover { transform: scale(1.6); }
+  .pip.approved { background: var(--green); }
+  .pip.blocked { background: var(--red); }
+  .pip.none { background: var(--gray); }
+  .pip-tooltip {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: var(--panel-raised); border: 1px solid var(--border);
+    padding: 6px 10px; border-radius: 4px;
+    font-family: var(--mono); font-size: 10px; white-space: nowrap;
+    opacity: 0; pointer-events: none; transition: opacity 0.12s ease; z-index: 5;
+  }
+  .pip:hover .pip-tooltip { opacity: 1; }
+  .heartbeat-label { font-family: var(--mono); font-size: 9px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+
+  .card { background: var(--panel); border: 1px solid var(--border-soft); border-radius: 8px; padding: 16px 18px; margin-bottom: 14px; }
+  .card-label { font-family: var(--mono); font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 12px; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .stat-block { min-width: 0; }
+  .stat-value { font-family: var(--mono); font-size: 19px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; }
+  .stat-sub-label { font-size: 10px; color: var(--text-dim); margin-top: 3px; }
+
+  .limit-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .limit-row:last-child { margin-bottom: 0; }
+  .limit-label { font-family: var(--mono); font-size: 10px; color: var(--text-dim); width: 44px; flex-shrink: 0; }
+  .limit-track { flex: 1; height: 6px; background: var(--border-soft); border-radius: 3px; overflow: hidden; position: relative; }
+  .limit-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
+  .limit-fill.safe { background: var(--green); }
+  .limit-fill.warn { background: var(--amber); }
+  .limit-fill.danger { background: var(--red); }
+  .limit-pct-stack { width: 70px; flex-shrink: 0; text-align: right; }
+  .limit-current { font-family: var(--mono); font-size: 12px; font-weight: 700; line-height: 1.2; }
+  .limit-target { font-family: var(--mono); font-size: 9px; color: var(--text-faint); margin-top: 1px; }
+
+  .positions-empty { font-size: 11px; color: var(--text-faint); padding: 8px 0; }
+  .position-row { display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border-soft); }
+  .position-row:last-child { border-bottom: none; }
+  .pos-ticker { font-family: var(--mono); font-weight: 600; font-size: 12px; }
+  .pos-entry { font-family: var(--mono); font-size: 10px; color: var(--text-faint); }
+  .pos-pnl { font-family: var(--mono); font-size: 12px; font-weight: 600; text-align: right; }
+  .pos-pnl.pos { color: var(--green); }
+  .pos-pnl.neg { color: var(--red); }
+  .pos-bar { width: 50px; height: 4px; background: var(--border-soft); border-radius: 2px; overflow: hidden; }
+  .pos-bar-fill { height: 100%; border-radius: 2px; }
+
+  .feed-item { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border-soft); }
+  .feed-item:last-child { border-bottom: none; }
+  .feed-tag { font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; height: fit-content; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.03em; }
+  .feed-tag.approved { background: var(--green-dim); color: var(--green); }
+  .feed-tag.blocked { background: var(--red-dim); color: var(--red); }
+  .feed-tag.none { background: rgba(85,91,102,0.15); color: var(--gray); }
+  .feed-body { flex: 1; min-width: 0; }
+  .feed-headline { font-size: 11.5px; color: var(--text); margin-bottom: 2px; }
+  .feed-headline .tkr { font-family: var(--mono); font-weight: 600; }
+  .feed-reason { font-size: 10.5px; color: var(--text-dim); line-height: 1.4; }
+  .feed-time { font-family: var(--mono); font-size: 9.5px; color: var(--text-faint); flex-shrink: 0; white-space: nowrap; }
+
+  .actions-row { display: flex; gap: 8px; margin-top: 4px; }
+  .btn { font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 8px 12px; border-radius: 5px; border: 1px solid var(--border); background: var(--panel-raised); color: var(--text-dim); cursor: pointer; transition: all 0.12s ease; flex: 1; text-align: center; }
+  .btn:hover { color: var(--text); border-color: var(--text-faint); }
+  .btn.danger { color: var(--red); border-color: var(--red-dim); }
+  .btn.danger:hover { background: var(--red-dim); }
+
+  .footer-note { text-align: center; padding: 18px; font-family: var(--mono); font-size: 10px; color: var(--text-faint); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div>
+      <div class="logo">ALPHAAGENT // CONTROL</div>
+      <div class="logo-sub">Live monitoring — paper trading</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="kill-pill ok" id="stock-kill-pill"><span class="dot"></span> STOCK: ACTIVE</div>
+    <div class="kill-pill ok" id="crypto-kill-pill"><span class="dot"></span> CRYPTO: ACTIVE</div>
+    <div class="clock" id="clock">--:--:-- ET</div>
+  </div>
+</div>
+
+<div class="panel-grid">
+
+  <div class="agent-col stock">
+    <div class="agent-header">
+      <div class="agent-title">AlphaAgent</div>
+      <div class="agent-mode">Stocks · 5min cycle</div>
+    </div>
+    <div class="agent-sub">20 tickers · confidence ≥ 0.78 · cash-only</div>
+
+    <div class="heartbeat-label">Recent decisions</div>
+    <div class="heartbeat" id="stock-heartbeat"></div>
+
+    <div class="card">
+      <div class="card-label">Account</div>
+      <div class="stat-grid">
+        <div class="stat-block"><div class="stat-value" id="stock-equity">$1,000.00</div><div class="stat-sub-label">Portfolio value</div></div>
+        <div class="stat-block"><div class="stat-value" id="stock-cash">$1,000.00</div><div class="stat-sub-label">Cash (non-margin)</div></div>
+        <div class="stat-block"><div class="stat-value" id="stock-positions">0 / 3</div><div class="stat-sub-label">Open positions</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Loss limits</div>
+      <div class="limit-row">
+        <div class="limit-label">DAILY</div>
+        <div class="limit-track"><div class="limit-fill safe" id="stock-daily-fill" style="width:0%"></div></div>
+        <div class="limit-pct-stack">
+          <div class="limit-current" id="stock-daily-current">0.0%</div>
+          <div class="limit-target">limit −8%</div>
+        </div>
+      </div>
+      <div class="limit-row">
+        <div class="limit-label">WEEKLY</div>
+        <div class="limit-track"><div class="limit-fill safe" id="stock-weekly-fill" style="width:0%"></div></div>
+        <div class="limit-pct-stack">
+          <div class="limit-current" id="stock-weekly-current">0.0%</div>
+          <div class="limit-target">limit −15%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Open positions</div>
+      <div id="stock-positions-list"><div class="positions-empty">No open positions</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Decision feed</div>
+      <div id="stock-feed"></div>
+    </div>
+
+    <div class="actions-row">
+      <button class="btn" onclick="alert('Wire this to: node reset-killswitch.js (run on Render Shell)')">Reset kill switch</button>
+      <button class="btn danger" onclick="alert('Wire this to a trip-killswitch.js script')">Halt trading</button>
+    </div>
+  </div>
+
+  <div class="agent-col crypto">
+    <div class="agent-header">
+      <div class="agent-title">AlphaAgent Crypto</div>
+      <div class="agent-mode">Event-driven</div>
+    </div>
+    <div class="agent-sub">6 pairs · confidence ≥ 0.68 · cash-only</div>
+
+    <div class="heartbeat-label">Recent decisions</div>
+    <div class="heartbeat" id="crypto-heartbeat"></div>
+
+    <div class="card">
+      <div class="card-label">Account</div>
+      <div class="stat-grid">
+        <div class="stat-block"><div class="stat-value" id="crypto-equity">$100,000.00</div><div class="stat-sub-label">Portfolio value</div></div>
+        <div class="stat-block"><div class="stat-value" id="crypto-cash">$100,000.00</div><div class="stat-sub-label">Cash (non-margin)</div></div>
+        <div class="stat-block"><div class="stat-value" id="crypto-positions">0 / 3</div><div class="stat-sub-label">Open positions</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Loss limits</div>
+      <div class="limit-row">
+        <div class="limit-label">DAILY</div>
+        <div class="limit-track"><div class="limit-fill safe" id="crypto-daily-fill" style="width:0%"></div></div>
+        <div class="limit-pct-stack">
+          <div class="limit-current" id="crypto-daily-current">0.0%</div>
+          <div class="limit-target">limit −10%</div>
+        </div>
+      </div>
+      <div class="limit-row">
+        <div class="limit-label">WEEKLY</div>
+        <div class="limit-track"><div class="limit-fill safe" id="crypto-weekly-fill" style="width:0%"></div></div>
+        <div class="limit-pct-stack">
+          <div class="limit-current" id="crypto-weekly-current">0.0%</div>
+          <div class="limit-target">limit −18%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Open positions</div>
+      <div id="crypto-positions-list"><div class="positions-empty">No open positions</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Decision feed</div>
+      <div id="crypto-feed"></div>
+    </div>
+
+    <div class="actions-row">
+      <button class="btn" onclick="alert('Wire this to: node reset-killswitch.js (run on Render Shell)')">Reset kill switch</button>
+      <button class="btn danger" onclick="alert('Wire this to a trip-killswitch.js script')">Halt trading</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer-note">Live data, refreshing every 30s. <a href="#" id="forget-keys-link" style="color:var(--text-faint);text-decoration:underline;">Forget saved keys</a></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// LIVE CONFIG — your real endpoints
+// ─────────────────────────────────────────────────────────────
+const ENDPOINTS = {
+  stock: {
+    url: 'https://alphaagent-web.onrender.com/status',
+    key: '',          // paste your STATUS_API_KEY here, locally only - see note below
+    knownEquity: 1000.00, // stock agent's /status doesn't return totalValue, so we use the configured baseline
+    dailyLimitPct: -0.08,
+    weeklyLimitPct: -0.15,
+  },
+  crypto: {
+    url: 'https://alphaagent-crypto-web.onrender.com/status',
+    key: '',          // paste your STATUS_API_KEY here, locally only - see note below
+    dailyLimitPct: -0.10,
+    weeklyLimitPct: -0.18,
+  },
+};
+
+// IMPORTANT: this file is a local tool you open yourself - it's never
+// uploaded anywhere. Pasting your STATUS_API_KEY values into the two
+// ENDPOINTS.key fields above is safe for that reason. Just don't ever
+// commit this specific file (with real keys filled in) to a public
+// place. If you want extra caution, leave key blank and the panel
+// will prompt you once on load instead of storing it in the file.
+
+function timeAgo(isoString) {
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  return `${hrs}h ago`;
+}
+
+function mapDecision(d) {
+  return {
+    ticker: d.ticker || '—',
+    action: d.action || 'none',
+    approved: !!d.approved,
+    reason: d.reason || d.blockReason || 'No reason logged',
+    confidence: typeof d.confidence === 'number' ? d.confidence : 0,
+    time: d.timestamp ? timeAgo(d.timestamp) : '—',
+  };
+}
+
+function mapStockResponse(json) {
+  const cfg = ENDPOINTS.stock;
+  const equity = cfg.knownEquity;
+  const dailyPnlPct = (json.pnl.dailyPnlUsd || 0) / equity;
+  const weeklyPnlPct = (json.pnl.weeklyPnlUsd || 0) / equity;
+
+  return {
+    killSwitchTripped: !!json.pnl.killSwitchTripped,
+    equity: equity,
+    cash: equity,
+    openPositions: (json.portfolio.positions || []).map(p => ({
+      ticker: p.symbol,
+      entryPrice: parseFloat(p.avg_entry_price || 0),
+      currentPrice: parseFloat(p.current_price || 0),
+      pnlPct: p.avg_entry_price ? (parseFloat(p.current_price) - parseFloat(p.avg_entry_price)) / parseFloat(p.avg_entry_price) : 0,
+    })),
+    maxOpenPositions: json.portfolio.maxOpenPositions || 3,
+    dailyPnlPct, weeklyPnlPct,
+    dailyLimitPct: cfg.dailyLimitPct, weeklyLimitPct: cfg.weeklyLimitPct,
+    decisions: (json.decisions || []).slice(-10).reverse().map(mapDecision),
+  };
+}
+
+function mapCryptoResponse(json) {
+  const cfg = ENDPOINTS.crypto;
+  const equity = json.portfolio.totalValue || 100000;
+  const dailyPnlPct = (json.pnl.dailyPnlUsd || 0) / equity;
+  const weeklyPnlPct = (json.pnl.weeklyPnlUsd || 0) / equity;
+
+  return {
+    killSwitchTripped: !!json.pnl.killSwitchTripped,
+    equity: equity,
+    cash: json.portfolio.cash || equity,
+    openPositions: (json.portfolio.positions || []).map(p => ({
+      ticker: p.symbol,
+      entryPrice: parseFloat(p.avg_entry_price || 0),
+      currentPrice: parseFloat(p.current_price || 0),
+      pnlPct: p.avg_entry_price ? (parseFloat(p.current_price) - parseFloat(p.avg_entry_price)) / parseFloat(p.avg_entry_price) : 0,
+    })),
+    maxOpenPositions: json.portfolio.maxOpenPositions || 3,
+    dailyPnlPct, weeklyPnlPct,
+    dailyLimitPct: cfg.dailyLimitPct, weeklyLimitPct: cfg.weeklyLimitPct,
+    decisions: (json.decisions || []).slice(-10).reverse().map(mapDecision),
+  };
+}
+
+function emptyAgentState(limits) {
+  return {
+    killSwitchTripped: false, equity: 0, cash: 0, openPositions: [], maxOpenPositions: 3,
+    dailyPnlPct: 0, weeklyPnlPct: 0, dailyLimitPct: limits.dailyLimitPct, weeklyLimitPct: limits.weeklyLimitPct,
+    decisions: [],
+  };
+}
+
+let liveData = {
+  stock: emptyAgentState(ENDPOINTS.stock),
+  crypto: emptyAgentState(ENDPOINTS.crypto),
+};
+
+function fmtUsd(n) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fmtPct(n) { const sign = n >= 0 ? '+' : ''; return sign + (n * 100).toFixed(1) + '%'; }
+function limitFillClass(pnlPct, limitPct) {
+  const usedRatio = Math.abs(pnlPct) / Math.abs(limitPct);
+  if (usedRatio >= 0.85) return 'danger';
+  if (usedRatio >= 0.5) return 'warn';
+  return 'safe';
+}
+
+function renderAgent(prefix, data) {
+  const pill = document.getElementById(`${prefix}-kill-pill`);
+  if (data.killSwitchTripped) {
+    pill.className = 'kill-pill tripped';
+    pill.innerHTML = `<span class="dot"></span> ${prefix.toUpperCase()}: HALTED`;
+  } else {
+    pill.className = 'kill-pill ok';
+    pill.innerHTML = `<span class="dot"></span> ${prefix.toUpperCase()}: ACTIVE`;
+  }
+
+  document.getElementById(`${prefix}-equity`).textContent = fmtUsd(data.equity);
+  document.getElementById(`${prefix}-cash`).textContent = fmtUsd(data.cash);
+  document.getElementById(`${prefix}-positions`).textContent = `${data.openPositions.length} / ${data.maxOpenPositions}`;
+
+  const dailyRatio = Math.min(Math.abs(data.dailyPnlPct) / Math.abs(data.dailyLimitPct), 1) * 100;
+  const weeklyRatio = Math.min(Math.abs(data.weeklyPnlPct) / Math.abs(data.weeklyLimitPct), 1) * 100;
+
+  const dailyFill = document.getElementById(`${prefix}-daily-fill`);
+  const dailyFillClass = data.dailyPnlPct < 0 ? limitFillClass(data.dailyPnlPct, data.dailyLimitPct) : 'safe';
+  dailyFill.style.width = data.dailyPnlPct < 0 ? `${dailyRatio}%` : '0%';
+  dailyFill.className = `limit-fill ${dailyFillClass}`;
+  const dailyCurrentEl = document.getElementById(`${prefix}-daily-current`);
+  dailyCurrentEl.textContent = fmtPct(data.dailyPnlPct);
+  dailyCurrentEl.style.color = data.dailyPnlPct >= 0 ? 'var(--green)' : `var(--${dailyFillClass === 'safe' ? 'green' : dailyFillClass === 'warn' ? 'amber' : 'red'})`;
+
+  const weeklyFill = document.getElementById(`${prefix}-weekly-fill`);
+  const weeklyFillClass = data.weeklyPnlPct < 0 ? limitFillClass(data.weeklyPnlPct, data.weeklyLimitPct) : 'safe';
+  weeklyFill.style.width = data.weeklyPnlPct < 0 ? `${weeklyRatio}%` : '0%';
+  weeklyFill.className = `limit-fill ${weeklyFillClass}`;
+  const weeklyCurrentEl = document.getElementById(`${prefix}-weekly-current`);
+  weeklyCurrentEl.textContent = fmtPct(data.weeklyPnlPct);
+  weeklyCurrentEl.style.color = data.weeklyPnlPct >= 0 ? 'var(--green)' : `var(--${weeklyFillClass === 'safe' ? 'green' : weeklyFillClass === 'warn' ? 'amber' : 'red'})`;
+
+  const posList = document.getElementById(`${prefix}-positions-list`);
+  if (data.openPositions.length === 0) {
+    posList.innerHTML = '<div class="positions-empty">No open positions</div>';
+  } else {
+    posList.innerHTML = data.openPositions.map(p => {
+      const pnlClass = p.pnlPct >= 0 ? 'pos' : 'neg';
+      const barWidth = Math.min(Math.abs(p.pnlPct) * 400, 100);
+      const barColor = p.pnlPct >= 0 ? 'var(--green)' : 'var(--red)';
+      return `<div class="position-row">
+          <div><div class="pos-ticker">${p.ticker}</div><div class="pos-entry">entry $${p.entryPrice.toFixed(2)}</div></div>
+          <div class="pos-bar"><div class="pos-bar-fill" style="width:${barWidth}%;background:${barColor}"></div></div>
+          <div class="pos-pnl ${pnlClass}">${fmtPct(p.pnlPct)}</div>
+        </div>`;
+    }).join('');
+  }
+
+  const heartbeat = document.getElementById(`${prefix}-heartbeat`);
+  const reversedForDisplay = [...data.decisions].reverse();
+  heartbeat.innerHTML = reversedForDisplay.map(d => {
+    const cls = d.approved ? 'approved' : (d.action === 'none' || d.action === 'hold') ? 'none' : 'blocked';
+    return `<div class="pip ${cls}"><div class="pip-tooltip">${d.ticker} · conf ${d.confidence}</div></div>`;
+  }).join('');
+
+  const feed = document.getElementById(`${prefix}-feed`);
+  feed.innerHTML = data.decisions.map(d => {
+    const cls = d.approved ? 'approved' : (d.action === 'none' || d.action === 'hold') ? 'none' : 'blocked';
+    const tagText = d.approved ? 'FILLED' : (d.action === 'none' || d.action === 'hold') ? 'NONE' : 'BLOCKED';
+    return `<div class="feed-item">
+        <div class="feed-tag ${cls}">${tagText}</div>
+        <div class="feed-body">
+          <div class="feed-headline"><span class="tkr">${d.ticker}</span> — ${d.action} · conf ${d.confidence}</div>
+          <div class="feed-reason">${d.reason}</div>
+        </div>
+        <div class="feed-time">${d.time}</div>
+      </div>`;
+  }).join('');
+}
+
+async function fetchAgent(name) {
+  const cfg = ENDPOINTS[name];
+  try {
+    const res = await fetch(`${cfg.url}?key=${encodeURIComponent(cfg.key)}`, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) {
+      console.warn(`${name}: HTTP ${res.status}`);
+      return null;
+    }
+    const json = await res.json();
+    return name === 'stock' ? mapStockResponse(json) : mapCryptoResponse(json);
+  } catch (err) {
+    console.warn(`${name}: fetch failed - ${err.message}`);
+    return null;
+  }
+}
+
+async function refreshAll() {
+  const [stockResult, cryptoResult] = await Promise.all([fetchAgent('stock'), fetchAgent('crypto')]);
+
+  if (stockResult) { liveData.stock = stockResult; renderAgent('stock', liveData.stock); }
+  else renderConnectionError('stock');
+
+  if (cryptoResult) { liveData.crypto = cryptoResult; renderAgent('crypto', liveData.crypto); }
+  else renderConnectionError('crypto');
+}
+
+function renderConnectionError(prefix) {
+  const pill = document.getElementById(`${prefix}-kill-pill`);
+  pill.className = 'kill-pill tripped';
+  pill.innerHTML = `<span class="dot"></span> ${prefix.toUpperCase()}: UNREACHABLE`;
+}
+
+const STORAGE_KEY = 'alphaagent_dashboard_keys';
+
+function loadStoredKeys() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function saveStoredKeys(stockKey, cryptoKey) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ stockKey, cryptoKey }));
+  } catch {
+    // localStorage unavailable (private browsing etc) - silently skip, keys just won't persist
+  }
+}
+
+function clearStoredKeys() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch {}
+}
+
+function showKeyModal() {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100;font-family:var(--sans);';
+    overlay.innerHTML = `
+      <div style="background:var(--panel-raised);border:1px solid var(--border);border-radius:10px;padding:28px;width:380px;max-width:90vw;">
+        <div style="font-family:var(--mono);font-size:14px;font-weight:700;margin-bottom:6px;">Connect to your agents</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:18px;">Paste each agent's STATUS_API_KEY (from Render's Environment tab).</div>
+
+        <div style="margin-bottom:12px;">
+          <label style="font-family:var(--mono);font-size:10px;color:var(--stock);display:block;margin-bottom:5px;">STOCK STATUS_API_KEY</label>
+          <input id="modal-stock-key" type="password" style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;" />
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="font-family:var(--mono);font-size:10px;color:var(--crypto);display:block;margin-bottom:5px;">CRYPTO STATUS_API_KEY</label>
+          <input id="modal-crypto-key" type="password" style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;" />
+        </div>
+
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:20px;font-size:11px;color:var(--text-dim);cursor:pointer;">
+          <input id="modal-remember" type="checkbox" style="accent-color:var(--green);" />
+          Remember on this device (stored only in this browser, never sent anywhere)
+        </label>
+
+        <button id="modal-connect" style="width:100%;background:var(--green);color:#04140d;border:none;border-radius:6px;padding:10px;font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;">Connect</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    document.getElementById('modal-connect').onclick = () => {
+      const stockKey = document.getElementById('modal-stock-key').value.trim();
+      const cryptoKey = document.getElementById('modal-crypto-key').value.trim();
+      const remember = document.getElementById('modal-remember').checked;
+      document.body.removeChild(overlay);
+      resolve({ stockKey, cryptoKey, remember });
+    };
+  });
+}
+
+async function promptForKeysIfNeeded() {
+  const stored = loadStoredKeys();
+  if (stored && stored.stockKey && stored.cryptoKey) {
+    ENDPOINTS.stock.key = stored.stockKey;
+    ENDPOINTS.crypto.key = stored.cryptoKey;
+    return;
+  }
+
+  const { stockKey, cryptoKey, remember } = await showKeyModal();
+  ENDPOINTS.stock.key = stockKey;
+  ENDPOINTS.crypto.key = cryptoKey;
+
+  if (remember) {
+    saveStoredKeys(stockKey, cryptoKey);
+  }
+}
+
+function renderAll() {
+  renderAgent('stock', liveData.stock);
+  renderAgent('crypto', liveData.crypto);
+}
+
+function tickClock() {
+  const now = new Date();
+  const et = now.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour12: true });
+  document.getElementById('clock').textContent = `${et} ET`;
+}
+
+document.getElementById('forget-keys-link').onclick = (e) => {
+  e.preventDefault();
+  clearStoredKeys();
+  alert('Saved keys cleared. Reload the page to re-enter them.');
+};
+
+async function init() {
+  await promptForKeysIfNeeded();
+  renderAll();
+  refreshAll();
+  tickClock();
+  setInterval(tickClock, 1000);
+  setInterval(refreshAll, 30000);
+}
+
+init();
+
+/* INTEGRATION NOTES
+   This file currently renders the demoData object above.
+   To go live: fetch your agents' real /status endpoints on an
+   interval, reshape the response to match what renderAgent()
+   expects (equity, cash, openPositions, dailyPnlPct, weeklyPnlPct,
+   killSwitchTripped, decisions[]), and call renderAgent() with it.
+
+   Two things to solve before this is fully live:
+   1. CORS - your Render services need to allow requests from
+      wherever this file is opened/hosted.
+   2. The crypto agent's daily-log + P&L files don't currently
+      expose a combined /status shape - you'd want a small endpoint
+      that reads persist.load() + persist.loadPnl() + getPositions()
+      together as one JSON object.
+
+   The Reset/Halt buttons are currently just alerts - wiring them
+   means exposing a protected POST endpoint on each agent that
+   calls guardian.manualReset() (or a trip equivalent).
+*/
+</script>
+</body>
+</html>
