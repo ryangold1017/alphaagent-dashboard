@@ -85,10 +85,11 @@
 
     .agent-col { padding: 16px; }
 
-    .stat-grid { display: block; }
-    .stat-block { margin-bottom: 14px; }
-    .stat-block:last-child { margin-bottom: 0; }
-    .stat-value { font-size: 20px; white-space: normal; word-break: break-word; }
+    .stat-grid { display: flex; flex-direction: column; gap: 10px; }
+    .stat-block { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0; padding-bottom: 8px; border-bottom: 1px solid var(--border-soft); }
+    .stat-block:last-child { border-bottom: none; padding-bottom: 0; }
+    .stat-value { font-size: 16px; white-space: nowrap; order: 2; }
+    .stat-sub-label { margin-top: 0; order: 1; font-size: 12px; }
 
     .position-row { grid-template-columns: 1fr auto; row-gap: 4px; }
     .pos-bar { display: none; }
