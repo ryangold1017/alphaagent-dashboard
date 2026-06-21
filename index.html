@@ -324,7 +324,6 @@ const ENDPOINTS = {
   stock: {
     url: 'https://alphaagent-web.onrender.com/status',
     key: '',          // paste your STATUS_API_KEY here, locally only - see note below
-    knownEquity: 1000.00, // stock agent's /status doesn't return totalValue, so we use the configured baseline
     dailyLimitPct: -0.08,
     weeklyLimitPct: -0.15,
   },
@@ -365,14 +364,15 @@ function mapDecision(d) {
 
 function mapStockResponse(json) {
   const cfg = ENDPOINTS.stock;
-  const equity = cfg.knownEquity;
-  const dailyPnlPct = (json.pnl.dailyPnlUsd || 0) / equity;
-  const weeklyPnlPct = (json.pnl.weeklyPnlUsd || 0) / equity;
+  const equity = json.portfolio.totalValue;
+  const cash = json.portfolio.cash;
+  const dailyPnlPct = equity ? (json.pnl.dailyPnlUsd || 0) / equity : 0;
+  const weeklyPnlPct = equity ? (json.pnl.weeklyPnlUsd || 0) / equity : 0;
 
   return {
     killSwitchTripped: !!json.pnl.killSwitchTripped,
     equity: equity,
-    cash: equity,
+    cash: cash,
     openPositions: (json.portfolio.positions || []).map(p => ({
       ticker: p.symbol,
       entryPrice: parseFloat(p.avg_entry_price || 0),
@@ -388,9 +388,9 @@ function mapStockResponse(json) {
 
 function mapCryptoResponse(json) {
   const cfg = ENDPOINTS.crypto;
-  const equity = json.portfolio.totalValue || 100000;
-  const dailyPnlPct = (json.pnl.dailyPnlUsd || 0) / equity;
-  const weeklyPnlPct = (json.pnl.weeklyPnlUsd || 0) / equity;
+  const equity = json.portfolio.totalValue;
+  const dailyPnlPct = equity ? (json.pnl.dailyPnlUsd || 0) / equity : 0;
+  const weeklyPnlPct = equity ? (json.pnl.weeklyPnlUsd || 0) / equity : 0;
 
   return {
     killSwitchTripped: !!json.pnl.killSwitchTripped,
@@ -422,7 +422,7 @@ let liveData = {
   crypto: emptyAgentState(ENDPOINTS.crypto),
 };
 
-function fmtUsd(n) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fmtUsd(n) { return (n === undefined || n === null) ? '—' : '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function fmtPct(n) { const sign = n >= 0 ? '+' : ''; return sign + (n * 100).toFixed(1) + '%'; }
 function limitFillClass(pnlPct, limitPct) {
   const usedRatio = Math.abs(pnlPct) / Math.abs(limitPct);
